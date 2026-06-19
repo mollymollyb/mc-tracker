@@ -210,6 +210,7 @@ select.fi{cursor:pointer}
       <button class="nav-arrow" onclick="changeDate(1)">›</button>
     </div>
     <button class="today-btn" onclick="goToday()">Today</button>
+    <button class="today-btn" style="background:#f0fdf4;color:#16a34a" onclick="exportData()" title="Backup data">💾</button>
   </div>
 </div>
 
@@ -606,7 +607,21 @@ function jumpTo(d){ st.date=d; setView('log'); }
 // ====================================================
 function rReport(){
   const t=today(), ma=off(t,-30);
-  return `<div class="rep-top">
+  return `
+  <div class="card" style="margin-bottom:12px">
+    <div class="card-head"><div class="card-icon" style="background:#f0fdf4">💾</div><div class="card-title">Backup & Restore</div></div>
+    <div class="card-body">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Your data lives on this device. Back up regularly to avoid losing it.</p>
+      <div style="display:flex;gap:10px">
+        <button onclick="exportData()" style="flex:1;background:#16a34a;color:white;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">⬇️ Export Backup</button>
+        <label style="flex:1;background:var(--blue);color:white;border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px">
+          ⬆️ Import Backup
+          <input type="file" accept=".json" style="display:none" onchange="importData(this)">
+        </label>
+      </div>
+    </div>
+  </div>
+  <div class="rep-top">
     <h2>Doctor Report</h2>
     <p>Generate a summary for your appointment</p>
     <div class="range-row">
@@ -877,6 +892,41 @@ function saveNotes(){
 // ====================================================
 function esc(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function scroll2(sel){ setTimeout(()=>{ const e=document.querySelector(sel); if(e){e.scrollIntoView({behavior:'smooth',block:'nearest'});if(e.focus)e.focus();}},60); }
+
+// ====================================================
+// EXPORT / IMPORT
+// ====================================================
+function exportData(){
+  const json=JSON.stringify(st.data,null,2);
+  const blob=new Blob([json],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`mc-tracker-backup-${today()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Backup saved ✓');
+}
+
+function importData(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const imported=JSON.parse(e.target.result);
+      if(!confirm('This will merge imported data with your existing data. Continue?')) return;
+      // Merge: imported data wins on conflict
+      Object.assign(st.data, imported);
+      save(); render();
+      showToast('Data imported ✓');
+    }catch(err){
+      alert('Could not read file — make sure it\'s a valid MC Tracker backup.');
+    }
+  };
+  reader.readAsText(file);
+}
 
 // ====================================================
 // INIT
