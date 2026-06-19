@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MC Daily Tracker</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f2f2f7;--card:#fff;--text:#1c1c1e;--muted:#8e8e93;--border:#e5e5ea;
+  --purple:#8b5cf6;--purple-bg:#f3f0ff;--purple-dark:#6d28d9;
+  --pink:#ec4899;--pink-bg:#fdf2f8;
+  --orange:#f97316;--orange-bg:#fff7ed;
+  --green:#22c55e;--green-bg:#f0fdf4;--green-dark:#16a34a;
+  --blue:#3b82f6;--blue-bg:#eff6ff;
+  --red:#ef4444;--teal:#06b6d4;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:76px}
+
+/* HEADER */
+.header{background:var(--card);padding:12px 16px;position:sticky;top:0;z-index:50;border-bottom:1px solid var(--border)}
+.header-inner{max-width:560px;margin:0 auto;display:flex;align-items:center;justify-content:space-between}
+.app-name{font-size:13px;font-weight:700;color:var(--purple);letter-spacing:.6px;text-transform:uppercase}
+.date-nav{display:flex;align-items:center;gap:6px}
+.nav-arrow{background:var(--bg);border:none;cursor:pointer;width:34px;height:34px;border-radius:50%;font-size:18px;color:var(--text);display:flex;align-items:center;justify-content:center;transition:background .12s}
+.nav-arrow:hover{background:var(--purple-bg)}
+.date-center{text-align:center;min-width:130px}
+.date-main{font-size:16px;font-weight:700}
+.date-sub{font-size:11px;color:var(--muted)}
+.today-btn{font-size:12px;color:var(--purple);background:var(--purple-bg);border:none;cursor:pointer;padding:5px 11px;border-radius:8px;font-weight:700;white-space:nowrap}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);display:flex;z-index:50;padding-bottom:env(safe-area-inset-bottom)}
+.bottom-nav button{flex:1;padding:10px 4px 8px;background:none;border:none;cursor:pointer;font-size:10px;color:var(--muted);font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;transition:color .15s}
+.bottom-nav button.active{color:var(--purple)}
+.bottom-nav button .ni{font-size:22px}
+
+/* CONTENT */
+.content{max-width:560px;margin:0 auto;padding:12px 12px 0}
+
+/* CARDS */
+.card{background:var(--card);border-radius:16px;margin-bottom:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.card-head{padding:14px 16px 0;display:flex;align-items:center;gap:10px}
+.card-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.card-title{font-size:17px;font-weight:700;flex:1}
+.card-body{padding:12px 16px 16px}
+
+/* QUICK STATS */
+.stats-row{display:flex;gap:8px;margin-bottom:12px}
+.stat-box{flex:1;background:var(--card);border-radius:14px;padding:12px 6px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.stat-val{font-size:24px;font-weight:800;line-height:1}
+.stat-lbl{font-size:10px;color:var(--muted);margin-top:3px}
+
+/* BM */
+.bm-row{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--purple-bg);border-radius:12px;margin-bottom:6px}
+.bm-time{font-size:13px;font-weight:700;color:var(--purple);min-width:44px}
+.bristol-tag{color:white;border-radius:16px;padding:3px 11px;font-size:12px;font-weight:700;white-space:nowrap}
+.bm-desc{font-size:12px;color:var(--muted);flex:1;line-height:1.3}
+.del-btn{background:none;border:none;cursor:pointer;color:#ccc;font-size:18px;padding:0 4px;border-radius:4px;flex-shrink:0;line-height:1}
+.del-btn:hover{color:var(--red)}
+
+/* ADD FORM */
+.add-form{border-radius:12px;padding:14px;margin-top:6px}
+.form-grid{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+.fi{border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:14px;background:white;color:var(--text);font-family:inherit;min-width:0}
+.fi:focus{outline:none;border-color:var(--purple)}
+select.fi{cursor:pointer}
+
+/* BRISTOL GRID */
+.bristol-row{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:8px}
+.b-btn{border-radius:10px;border:2px solid var(--border);background:white;cursor:pointer;padding:7px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:all .12s}
+.b-btn .bn{font-size:15px;font-weight:800;color:var(--text)}
+.b-btn .bl{font-size:8px;color:var(--muted);text-align:center;line-height:1.2}
+.b-btn:hover{border-color:var(--purple)}
+.b-btn.sel .bn,.b-btn.sel .bl{color:white}
+.b-btn[data-t="hard"]{border-color:#fca5a5}
+.b-btn[data-t="normal"]{border-color:#86efac}
+.b-btn[data-t="soft"]{border-color:#fdba74}
+.b-btn[data-t="liquid"]{border-color:#fca5a5}
+.b-btn[data-t="hard"].sel{background:#ef4444;border-color:#ef4444}
+.b-btn[data-t="normal"].sel{background:#22c55e;border-color:#22c55e}
+.b-btn[data-t="soft"].sel{background:#fb923c;border-color:#fb923c}
+.b-btn[data-t="liquid"].sel{background:#ef4444;border-color:#ef4444}
+
+.hint{font-size:12px;color:var(--muted);margin-bottom:10px;min-height:16px}
+.form-actions{display:flex;gap:8px}
+.btn-ok{color:white;border:none;border-radius:10px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;flex:1}
+.btn-cancel{background:var(--bg);color:var(--muted);border:none;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.add-row{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:10px;border:2px dashed var(--border);border-radius:10px;background:none;cursor:pointer;font-size:13px;color:var(--muted);font-family:inherit;transition:all .12s;margin-top:4px}
+.add-row:hover{border-color:var(--purple);color:var(--purple)}
+
+/* BLOATING */
+.bloat-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.bloat-lbl{font-size:12px;font-weight:700;color:var(--muted);width:26px}
+.bloat-slider{flex:1;-webkit-appearance:none;height:8px;border-radius:4px;outline:none;background:linear-gradient(to right,#4ade80 0%,#fb923c 50%,#ef4444 100%)}
+.bloat-slider::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:white;border:3px solid var(--pink);cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.bloat-val{font-size:18px;font-weight:800;min-width:28px;text-align:center;color:var(--pink)}
+.bloat-emoji{font-size:20px;min-width:24px;text-align:center}
+
+/* PAIN DOTS */
+.pain-section{margin-bottom:14px}
+.pain-section:last-child{margin-bottom:0}
+.pain-label{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:7px;text-transform:uppercase;letter-spacing:.3px}
+.pain-dots{display:flex;gap:5px;flex-wrap:wrap}
+.pdot{width:34px;height:34px;border-radius:50%;border:2px solid var(--border);background:white;cursor:pointer;font-size:13px;font-weight:800;color:var(--muted);display:flex;align-items:center;justify-content:center;transition:all .12s}
+.pdot:hover{border-color:var(--pink)}
+.pdot.on{color:white}
+
+/* CHIPS */
+.chip-wrap{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:20px;cursor:pointer;font-size:13px;font-weight:500;user-select:none;border:2px solid transparent;transition:all .12s}
+.chip .ci{font-size:16px}
+.chip.sx{background:#faf0ff;color:#9333ea}
+.chip.sx.on{background:#9333ea;color:white}
+.chip.dg{background:#fdf4ff;color:#a855f7}
+.chip.dg.on{background:#a855f7;color:white}
+.chip.md{background:var(--orange-bg);color:var(--orange)}
+.chip.md.on{background:var(--orange);color:white}
+.chip.ac{background:var(--green-bg);color:var(--green-dark)}
+.chip.ac.on{background:var(--green-dark);color:white}
+.chip.ot{background:#fff3e8;color:#ea580c}
+.chip.ot.on{background:#ea580c;color:white}
+
+/* FOOD / MED */
+.food-entry{display:flex;align-items:flex-start;gap:8px;padding:9px 10px;border-radius:10px;margin-bottom:5px;background:var(--green-bg)}
+.med-entry{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:10px;margin-bottom:5px;background:var(--blue-bg)}
+.meal-badge{font-size:10px;font-weight:800;padding:3px 7px;border-radius:6px;text-transform:uppercase;letter-spacing:.3px;color:white;white-space:nowrap;margin-top:1px;flex-shrink:0}
+.e-time{font-size:11px;color:var(--muted);white-space:nowrap}
+.e-text{font-size:13px;flex:1;line-height:1.35}
+.med-icon{font-size:18px;flex-shrink:0}
+.med-info{flex:1}
+.med-name{font-size:14px;font-weight:600}
+.med-detail{font-size:12px;color:var(--muted)}
+
+/* SLEEP */
+.sleep-row{display:flex;gap:6px;flex-wrap:wrap}
+.sleep-btn{padding:7px 14px;border-radius:16px;border:2px solid var(--border);background:white;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);transition:all .12s;font-family:inherit}
+.sleep-btn.on{background:var(--blue);border-color:var(--blue);color:white}
+
+/* NOTES */
+.notes-ta{width:100%;border:1.5px solid var(--border);border-radius:12px;padding:12px;font-size:14px;font-family:inherit;resize:vertical;min-height:90px;color:var(--text);line-height:1.4}
+.notes-ta:focus{outline:none;border-color:var(--purple)}
+.save-notes{background:var(--purple);color:white;border:none;border-radius:10px;padding:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;width:100%;margin-top:8px}
+
+/* TOAST */
+.toast{position:fixed;bottom:82px;left:50%;transform:translateX(-50%);background:rgba(28,28,30,.9);color:white;padding:8px 18px;border-radius:20px;font-size:13px;font-weight:500;z-index:999;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;backdrop-filter:blur(10px)}
+.toast.show{opacity:1}
+
+/* HISTORY */
+.hist-item{background:white;border-radius:14px;padding:14px 16px;margin-bottom:10px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.07);display:flex;gap:14px;align-items:center;transition:transform .1s}
+.hist-item:hover{transform:translateY(-1px)}
+.hist-date{min-width:44px;text-align:center}
+.hist-day{font-size:24px;font-weight:800;color:var(--purple);line-height:1}
+.hist-month{font-size:11px;color:var(--muted);text-transform:uppercase}
+.hist-body{flex:1;min-width:0}
+.hist-title{font-size:15px;font-weight:600;margin-bottom:4px}
+.hist-chips{display:flex;flex-wrap:wrap;gap:3px}
+.hchip{font-size:10px;padding:2px 7px;border-radius:6px;background:var(--purple-bg);color:var(--purple);font-weight:600}
+.hist-right{text-align:right;font-size:12px;color:var(--muted);flex-shrink:0}
+
+/* REPORT */
+.rep-top{background:white;border-radius:16px;padding:20px 16px;margin-bottom:12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.rep-top h2{font-size:22px;font-weight:800;margin-bottom:4px}
+.rep-top p{font-size:14px;color:var(--muted)}
+.range-row{display:flex;gap:8px;align-items:center;margin:14px 0 0;flex-wrap:wrap;justify-content:center}
+.range-row input[type="date"]{border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-size:13px;font-family:inherit;color:var(--text)}
+.gen-btn{background:var(--purple);color:white;border:none;border-radius:10px;padding:9px 20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.rep-sec{background:white;border-radius:14px;padding:16px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.rep-sec-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px}
+.rep-stats{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.rstat{flex:1;min-width:60px;background:var(--bg);border-radius:12px;padding:12px 8px;text-align:center}
+.rstat-val{font-size:24px;font-weight:800;line-height:1}
+.rstat-lbl{font-size:10px;color:var(--muted);margin-top:3px}
+.rtable{width:100%;border-collapse:collapse;font-size:12px}
+.rtable th{padding:7px 5px;border-bottom:2px solid var(--border);text-align:left;color:var(--muted);font-weight:700;white-space:nowrap}
+.rtable td{padding:6px 5px;border-bottom:1px solid var(--bg);vertical-align:top}
+.rtable tr:last-child td{border-bottom:none}
+.print-btn{background:linear-gradient(135deg,var(--purple),var(--purple-dark));color:white;border:none;border-radius:12px;padding:14px 24px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;width:100%;margin-top:4px}
+
+.empty{text-align:center;padding:48px 16px;color:var(--muted)}
+.empty .ei{font-size:52px;margin-bottom:12px}
+.hidden{display:none!important}
+
+/* BM quick tags */
+.bm-qtag{padding:8px 16px;border-radius:20px;border:2px solid var(--border);background:white;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);font-family:inherit;transition:all .12s}
+.bm-qtag:hover{border-color:var(--purple);color:var(--purple)}
+.bm-qtag-on{background:var(--purple)!important;border-color:var(--purple)!important;color:white!important}
+
+@media print{
+  .header,.bottom-nav,.range-row,.print-btn{display:none!important}
+  body{padding:0;background:white}
+  .content{max-width:100%;padding:0}
+  .rep-sec,.rstat,.card{box-shadow:none;border:1px solid #eee;page-break-inside:avoid}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <span class="app-name">🔬 MC Tracker</span>
+    <div class="date-nav">
+      <button class="nav-arrow" onclick="changeDate(-1)">‹</button>
+      <div class="date-center">
+        <div class="date-main" id="dateMain"></div>
+        <div class="date-sub" id="dateSub"></div>
+      </div>
+      <button class="nav-arrow" onclick="changeDate(1)">›</button>
+    </div>
+    <button class="today-btn" onclick="goToday()">Today</button>
+  </div>
+</div>
+
+<div class="content" id="mainContent"></div>
+
+<div class="bottom-nav">
+  <button class="active" id="navLog" onclick="setView('log')">
+    <span class="ni">📋</span>Log
+  </button>
+  <button id="navHistory" onclick="setView('history')">
+    <span class="ni">📅</span>History
+  </button>
+  <button id="navReport" onclick="setView('report')">
+    <span class="ni">📊</span>Report
+  </button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ====================================================
+// DATA
+// ====================================================
+const KEY = 'mc-tracker-v1';
+let st = {
+  view: 'log',
+  date: today(),
+  data: {},
+  addBM: false, bmD: {time:'',bristol:null,urgent:false,hemorrhoids:false,notes:''},
+  addFood: false, foodD: {time:'',type:'breakfast',item:''},
+  addMed: false, medD: {name:''},
+};
+
+function today(){ const d=new Date(); return d.toISOString().split('T')[0]; }
+function nowTime(){ const d=new Date(); return d.toTimeString().slice(0,5); }
+function load(){ try{ const r=localStorage.getItem(KEY); if(r) st.data=JSON.parse(r); }catch(e){} }
+function save(){ localStorage.setItem(KEY,JSON.stringify(st.data)); showToast('Saved ✓'); }
+
+function day(date){
+  if(!st.data[date]) st.data[date]={
+    bm:[],bloating:{am:0,pm:0},
+    symptoms:[],digestion:[],mood:[],food:[],
+    presetMeds:[],medications:[],activity:[],other:[],sleep:0,notes:''
+  };
+  return st.data[date];
+}
+
+// ====================================================
+// DATE
+// ====================================================
+function fmt1(d){
+  const t=today(), yest=off(t,-1);
+  if(d===t) return 'Today';
+  if(d===yest) return 'Yesterday';
+  return new Date(d+'T12:00:00').toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
+}
+function fmt2(d){ return new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}); }
+function off(d,n){ const x=new Date(d+'T12:00:00'); x.setDate(x.getDate()+n); return x.toISOString().split('T')[0]; }
+
+function changeDate(n){
+  const nd=off(st.date,n); if(nd>today()) return;
+  st.date=nd; st.addBM=false; st.addFood=false; st.addMed=false; render();
+}
+function goToday(){ st.date=today(); st.addBM=false; st.addFood=false; st.addMed=false; render(); }
+
+// ====================================================
+// TOAST
+// ====================================================
+let _tt;
+function showToast(m){ const e=document.getElementById('toast'); e.textContent=m; e.classList.add('show'); clearTimeout(_tt); _tt=setTimeout(()=>e.classList.remove('show'),1700); }
+
+// ====================================================
+// VIEW
+// ====================================================
+function setView(v){
+  st.view=v;
+  ['Log','History','Report'].forEach(x=>document.getElementById('nav'+x).classList.toggle('active',v===x.toLowerCase()));
+  render();
+}
+
+function render(){
+  document.getElementById('dateMain').textContent=fmt1(st.date);
+  document.getElementById('dateSub').textContent=fmt2(st.date);
+  const el=document.getElementById('mainContent');
+  if(st.view==='log') el.innerHTML=rLog();
+  else if(st.view==='history') el.innerHTML=rHistory();
+  else el.innerHTML=rReport();
+  attachAll();
+}
+
+// ====================================================
+// BRISTOL
+// ====================================================
+const BST=[
+  {n:1,lbl:'Hard lumps',t:'hard'},
+  {n:2,lbl:'Lumpy sausage',t:'hard'},
+  {n:3,lbl:'Cracked sausage',t:'normal'},
+  {n:4,lbl:'Smooth sausage',t:'normal'},
+  {n:5,lbl:'Soft blobs',t:'soft'},
+  {n:6,lbl:'Fluffy/mushy',t:'soft'},
+  {n:7,lbl:'Liquid',t:'liquid'},
+];
+function bDesc(n){ return BST[n-1]?BST[n-1].lbl:''; }
+function bColor(n){ if(n<=2) return '#ef4444'; if(n<=4) return '#22c55e'; if(n<=6) return '#fb923c'; return '#ef4444'; }
+
+// ====================================================
+// CHIP DATA
+// ====================================================
+const SX=[
+  {id:'fine',label:'Everything fine',icon:'👍'},
+  {id:'cramps',label:'Cramps',icon:'😣'},
+  {id:'fatigue',label:'Fatigue',icon:'🔋'},
+  {id:'headache',label:'Headache',icon:'🤕'},
+  {id:'fever',label:'Fever/chills',icon:'🌡️'},
+  {id:'joints',label:'Joint pain',icon:'🦴'},
+  {id:'back',label:'Backache',icon:'🫁'},
+  {id:'dehy',label:'Dehydration',icon:'💧'},
+  {id:'dizzy',label:'Dizziness',icon:'💫'},
+];
+
+const PRESET_MEDS=['Vyvanse','Vitamin D','Uceris','Xifaxan'];
+const DG=[
+  {id:'nausea',label:'Nausea',icon:'🤢'},
+  {id:'vomit',label:'Vomiting',icon:'🤮'},
+  {id:'bloating_s',label:'Bloating',icon:'🎈'},
+  {id:'gas',label:'Gas',icon:'💨'},
+  {id:'constip',label:'Constipation',icon:'🔒'},
+  {id:'diarrhea',label:'Diarrhea',icon:'🚽'},
+  {id:'urgency',label:'Urgency',icon:'⚡'},
+  {id:'blood',label:'Blood in stool',icon:'🔴'},
+  {id:'mucus',label:'Mucus in stool',icon:'💧'},
+  {id:'appetite',label:'Low appetite',icon:'🍽️'},
+  {id:'heartburn',label:'Heartburn/reflux',icon:'🔥'},
+];
+const MD=[
+  {id:'calm',label:'Calm',icon:'😌'},
+  {id:'happy',label:'Happy',icon:'😊'},
+  {id:'ok',label:'OK',icon:'😐'},
+  {id:'anxious',label:'Anxious',icon:'😰'},
+  {id:'irritable',label:'Irritable',icon:'😤'},
+  {id:'sad',label:'Sad',icon:'😢'},
+  {id:'stressed',label:'Stressed',icon:'😩'},
+  {id:'depressed',label:'Low mood',icon:'😞'},
+  {id:'brain_fog',label:'Brain fog',icon:'🌫️'},
+  {id:'overwhelm',label:'Overwhelmed',icon:'🌊'},
+];
+const AC=[
+  {id:'rest',label:'Rest day',icon:'🛋️'},
+  {id:'walk',label:'Walking',icon:'🚶'},
+  {id:'yoga',label:'Yoga',icon:'🧘'},
+  {id:'swim',label:'Swimming',icon:'🏊'},
+  {id:'run',label:'Running',icon:'🏃'},
+  {id:'gym',label:'Gym',icon:'💪'},
+  {id:'bike',label:'Cycling',icon:'🚴'},
+  {id:'other_ex',label:'Other',icon:'🏅'},
+];
+const OT=[
+  {id:'flare',label:'Flare day',icon:'🔥'},
+  {id:'good',label:'Good day',icon:'✨'},
+  {id:'stress_hi',label:'High stress',icon:'⚡'},
+  {id:'travel',label:'Traveling',icon:'✈️'},
+  {id:'alcohol',label:'Alcohol',icon:'🍷'},
+  {id:'caffeine',label:'Caffeine',icon:'☕'},
+  {id:'gluten',label:'Gluten exposure',icon:'🌾'},
+  {id:'medchange',label:'Med change',icon:'💊'},
+  {id:'period',label:'Period',icon:'🌸'},
+  {id:'poor_sleep',label:'Poor sleep',icon:'😴'},
+];
+
+const MTYPES=['breakfast','lunch','dinner','snack','drink','supplement','other'];
+const MCOLOR={breakfast:'#f97316',lunch:'#22c55e',dinner:'#3b82f6',snack:'#a855f7',drink:'#06b6d4',supplement:'#6366f1',other:'#64748b'};
+
+// ====================================================
+// LOG VIEW
+// ====================================================
+function rLog(){
+  const d=day(st.date);
+  const bmCnt=d.bm.length;
+  const avgB=bmCnt?(d.bm.reduce((a,b)=>a+b.bristol,0)/bmCnt).toFixed(1):'—';
+  const am=d.bloating.am||0, pm=d.bloating.pm||0;
+  return `
+  <div class="stats-row">
+    <div class="stat-box"><div class="stat-val" style="color:var(--purple)">${bmCnt}</div><div class="stat-lbl">BMs today</div></div>
+    <div class="stat-box"><div class="stat-val" style="color:${bmCnt?bColor(Math.round(parseFloat(avgB))):'#ccc'}">${avgB}</div><div class="stat-lbl">Avg Bristol</div></div>
+    <div class="stat-box"><div class="stat-val" style="color:var(--pink)">${am||'—'}</div><div class="stat-lbl">Bloat AM</div></div>
+    <div class="stat-box"><div class="stat-val" style="color:var(--pink)">${pm||'—'}</div><div class="stat-lbl">Bloat PM</div></div>
+  </div>
+  ${rBM(d)}
+  ${rFood(d)}
+  ${rBloat(d)}
+  ${rMed(d)}
+  ${rChips('Digestion & Stool','🫄','#fdf4ff','dg',DG,d.digestion,'digestion')}
+  ${rChips('Symptoms','🩹','#faf0ff','sx',SX,d.symptoms,'symptoms')}
+  ${rChips('Mood','🧠','var(--orange-bg)','md',MD,d.mood,'mood')}
+  ${rChips('Physical Activity','🏃','var(--green-bg)','ac',AC,d.activity,'activity')}
+  ${rChips('Other','✨','#fff3e8','ot',OT,d.other,'other')}
+  ${rNotes(d)}
+  `;
+}
+
+function rBM(d){
+  const list=d.bm.map((e,i)=>`
+    <div class="bm-row">
+      <span class="bm-time">${e.time}</span>
+      <span class="bristol-tag" style="background:${bColor(e.bristol)}">Type ${e.bristol}</span>
+      ${e.urgent?'<span style="font-size:12px;background:#fef3c7;color:#d97706;border-radius:8px;padding:2px 7px;font-weight:700">⚡ Urgent</span>':''}
+      ${e.hemorrhoids?'<span style="font-size:12px;background:#fee2e2;color:#dc2626;border-radius:8px;padding:2px 7px;font-weight:700">🩸 Hemm.</span>':''}
+      <span class="bm-desc">${bDesc(e.bristol)}${e.notes?' · '+esc(e.notes):''}</span>
+      <button class="del-btn" onclick="delBM(${i})">×</button>
+    </div>`).join('');
+
+  let form='';
+  if(st.addBM){
+    const dr=st.bmD;
+    form=`<div class="add-form" style="background:var(--purple-bg)">
+      <div class="fg" style="margin-bottom:12px"><label>Time</label><input class="fi" type="time" id="bmT" value="${dr.time||nowTime()}" style="width:130px"></div>
+      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px">Bristol Stool Type</div>
+      <div class="bristol-row">
+        ${BST.map(b=>`<button class="b-btn${dr.bristol===b.n?' sel':''}" data-t="${b.t}" onclick="pickB(${b.n})">
+          <span class="bn">${b.n}</span><span class="bl">${b.lbl.split(' ')[0]}</span>
+        </button>`).join('')}
+      </div>
+      <div class="hint">${dr.bristol?`Type ${dr.bristol}: ${bDesc(dr.bristol)}`:' Select a type above'}</div>
+      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px">Quick Tags</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <button id="bmUrgent" class="bm-qtag${dr.urgent?' bm-qtag-on':''}" onclick="toggleBMTag('urgent')">⚡ Urgent</button>
+        <button id="bmHemm" class="bm-qtag${dr.hemorrhoids?' bm-qtag-on':''}" onclick="toggleBMTag('hemorrhoids')">🩸 Hemorrhoids</button>
+      </div>
+      <div class="fg" style="margin-bottom:12px"><label>Notes (optional)</label>
+        <input class="fi" type="text" id="bmN" placeholder="nocturnal, after eating, etc." value="${dr.notes||''}" style="width:100%">
+      </div>
+      <div class="form-actions">
+        <button class="btn-cancel" onclick="cancelBM()">Cancel</button>
+        <button class="btn-ok" style="background:var(--purple)" onclick="saveBM()" ${dr.bristol?'':'disabled style="opacity:.5;cursor:not-allowed"'}>Add Entry</button>
+      </div>
+    </div>`;
+  }
+  return `<div class="card">
+    <div class="card-head"><div class="card-icon" style="background:var(--purple-bg)">🚽</div><div class="card-title">Bowel Movements</div></div>
+    <div class="card-body">${list}${form}${!st.addBM?`<button class="add-row" onclick="startBM()">+ Add BM Entry</button>`:''}</div>
+  </div>`;
+}
+
+function rBloat(d){
+  const am=d.bloating.am||0, pm=d.bloating.pm||0;
+  function emoji(v){ if(!v) return ''; if(v===1) return '😊'; if(v===2) return '😐'; if(v===3) return '😕'; if(v===4) return '😣'; return '😫'; }
+  function label(v){ if(!v) return 'None'; if(v===1) return 'Mild'; if(v===2) return 'Moderate'; if(v===3) return 'Noticeable'; if(v===4) return 'Uncomfortable'; return 'Severe'; }
+  return `<div class="card">
+    <div class="card-head"><div class="card-icon" style="background:var(--pink-bg)">🎈</div><div class="card-title">Bloating</div></div>
+    <div class="card-body">
+      <div class="bloat-row">
+        <span class="bloat-lbl">AM</span>
+        <input class="bloat-slider" type="range" min="0" max="5" value="${am}" id="bAM" oninput="sBloat('am',this.value)">
+        <span class="bloat-val" id="bAMv">${am||'—'}</span>
+        <span class="bloat-emoji">${emoji(am)}</span>
+      </div>
+      <div class="bloat-row">
+        <span class="bloat-lbl">PM</span>
+        <input class="bloat-slider" type="range" min="0" max="5" value="${pm}" id="bPM" oninput="sBloat('pm',this.value)">
+        <span class="bloat-val" id="bPMv">${pm||'—'}</span>
+        <span class="bloat-emoji">${emoji(pm)}</span>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">0 = none &nbsp;·&nbsp; 1 Mild &nbsp;·&nbsp; 3 Noticeable &nbsp;·&nbsp; 5 Severe</div>
+    </div>
+  </div>`;
+}
+
+
+function rChips(title,icon,iconBg,cls,items,sel,field){
+  const chips=items.map(it=>`<button class="chip ${cls}${sel&&sel.includes(it.id)?' on':''}" onclick="tog('${field}','${it.id}')"><span class="ci">${it.icon}</span>${it.label}</button>`).join('');
+  return `<div class="card">
+    <div class="card-head"><div class="card-icon" style="background:${iconBg}">${icon}</div><div class="card-title">${title}</div></div>
+    <div class="card-body"><div class="chip-wrap">${chips}</div></div>
+  </div>`;
+}
+
+function rFood(d){
+  const rows=(d.food||[]).map((e,i)=>`
+    <div class="food-entry">
+      <span class="meal-badge" style="background:${MCOLOR[e.type]||'#888'}">${e.type}</span>
+      <span class="e-time">${e.time}</span>
+      <span class="e-text">${esc(e.item)}</span>
+      <button class="del-btn" onclick="delFood(${i})">×</button>
+    </div>`).join('');
+  let form='';
+  if(st.addFood){
+    const dr=st.foodD;
+    form=`<div class="add-form" style="background:var(--green-bg)">
+      <div class="form-grid">
+        <div class="fg"><label>Type</label>
+          <select class="fi" id="fT">${MTYPES.map(t=>`<option value="${t}"${dr.type===t?' selected':''}>${t}</option>`).join('')}</select>
+        </div>
+        <div class="fg"><label>Time</label><input class="fi" type="time" id="fTm" value="${dr.time||nowTime()}"></div>
+      </div>
+      <div class="fg" style="margin-bottom:12px"><label>What did you have?</label>
+        <input class="fi" type="text" id="fIt" placeholder="e.g. oatmeal with banana, black coffee..." value="${esc(dr.item)}" style="width:100%">
+      </div>
+      <div class="form-actions">
+        <button class="btn-cancel" onclick="cancelFood()">Cancel</button>
+        <button class="btn-ok" style="background:var(--green-dark)" onclick="saveFood()">Add Entry</button>
+      </div>
+    </div>`;
+  }
+  return `<div class="card">
+    <div class="card-head"><div class="card-icon" style="background:var(--green-bg)">🍽️</div><div class="card-title">Food & Drink</div></div>
+    <div class="card-body">${rows}${form}${!st.addFood?`<button class="add-row" style="border-color:var(--green-bg)" onclick="startFood()">+ Add Food or Drink</button>`:''}</div>
+  </div>`;
+}
+
+function rMed(d){
+  if(!d.presetMeds) d.presetMeds=[];
+  const presets=PRESET_MEDS.map(m=>{
+    const on=d.presetMeds.includes(m);
+    return `<button class="chip${on?' on':''}" style="${on?'background:var(--blue);color:white;':'background:var(--blue-bg);color:var(--blue);'}" onclick="togPreset('${m}')">
+      <span class="ci">💊</span>${m}${on?' ✓':''}
+    </button>`;
+  }).join('');
+
+  const extras=(d.medications||[]).map((e,i)=>`
+    <div class="med-entry">
+      <span class="med-icon">💊</span>
+      <div class="med-info"><div class="med-name">${esc(e.name)}</div></div>
+      <button class="del-btn" onclick="delMed(${i})">×</button>
+    </div>`).join('');
+
+  let form='';
+  if(st.addMed){
+    form=`<div class="add-form" style="background:var(--blue-bg)">
+      <div class="fg" style="margin-bottom:10px"><label>Medication / supplement name</label>
+        <input class="fi" type="text" id="mN" placeholder="e.g. Advil, Tylenol, Midol..." value="${esc(st.medD.name)}" style="width:100%">
+      </div>
+      <div class="form-actions">
+        <button class="btn-cancel" onclick="cancelMed()">Cancel</button>
+        <button class="btn-ok" style="background:var(--blue)" onclick="saveMed()">Add</button>
+      </div>
+    </div>`;
+  }
+  return `<div class="card">
+    <div class="card-head"><div class="card-icon" style="background:var(--blue-bg)">💊</div><div class="card-title">Medications</div></div>
+    <div class="card-body">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px">Daily Medications</div>
+      <div class="chip-wrap" style="margin-bottom:14px">${presets}</div>
+      ${extras.length?`<div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px">As-Needed</div>${extras}`:''}
+      ${form}
+      ${!st.addMed?`<button class="add-row" style="border-color:var(--blue-bg)" onclick="startMed()">+ Add as-needed med</button>`:''}
+    </div>
+  </div>`;
+}
+
+
+function rNotes(d){
+  return `<div class="card">
+    <div class="card-head"><div class="card-icon" style="background:#f9fafb">📝</div><div class="card-title">Notes for Doctor</div></div>
+    <div class="card-body">
+      <textarea class="notes-ta" id="notesTA" placeholder="How are you feeling overall? Any triggers you noticed? Anything out of the ordinary your doctor should know about...">${esc(d.notes||'')}</textarea>
+      <button class="save-notes" onclick="saveNotes()">Save Notes</button>
+    </div>
+  </div>`;
+}
+
+// ====================================================
+// HISTORY
+// ====================================================
+function rHistory(){
+  const dates=Object.keys(st.data).sort().reverse();
+  if(!dates.length) return `<div class="empty"><div class="ei">📋</div><p>No entries yet.<br>Start logging today!</p></div>`;
+  return dates.map(d=>{
+    const dy=st.data[d], dt=new Date(d+'T12:00:00');
+    const bmc=(dy.bm||[]).length;
+    const chips=[...(dy.symptoms||[]),...(dy.digestion||[])].slice(0,4).map(id=>{
+      const all=[...SX,...DG]; const it=all.find(x=>x.id===id);
+      return it?`<span class="hchip">${it.icon} ${it.label}</span>`:'';
+    }).join('');
+    const am=dy.bloating?(dy.bloating.am||0):0, pm=dy.bloating?(dy.bloating.pm||0):0;
+    const flare=dy.other&&dy.other.includes('flare')?'🔥 ':'';
+    return `<div class="hist-item" onclick="jumpTo('${d}')">
+      <div class="hist-date"><div class="hist-day">${dt.getDate()}</div><div class="hist-month">${dt.toLocaleDateString('en-US',{month:'short'})}</div></div>
+      <div class="hist-body">
+        <div class="hist-title">${flare}${bmc} BM${bmc!==1?'s':''}</div>
+        <div class="hist-chips">${chips}</div>
+      </div>
+      <div class="hist-right">
+        ${am||pm?`<div style="font-size:10px">Bloat</div><div style="font-size:14px;font-weight:800;color:var(--pink)">${am}/${pm}</div>`:''}
+        ${dy.sleep?`<div style="font-size:10px;margin-top:4px">Sleep</div><div style="font-size:13px;font-weight:700;color:var(--blue)">${dy.sleep}h</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function jumpTo(d){ st.date=d; setView('log'); }
+
+// ====================================================
+// REPORT
+// ====================================================
+function rReport(){
+  const t=today(), ma=off(t,-30);
+  return `<div class="rep-top">
+    <h2>Doctor Report</h2>
+    <p>Generate a summary for your appointment</p>
+    <div class="range-row">
+      <label style="font-size:12px;font-weight:700;color:var(--muted)">From</label>
+      <input type="date" id="rFrom" value="${ma}" max="${t}">
+      <label style="font-size:12px;font-weight:700;color:var(--muted)">To</label>
+      <input type="date" id="rTo" value="${t}" max="${t}">
+      <button class="gen-btn" onclick="genReport()">Generate</button>
+    </div>
+  </div>
+  <div id="repOut"></div>`;
+}
+
+function genReport(){
+  const from=document.getElementById('rFrom').value;
+  const to=document.getElementById('rTo').value;
+  if(!from||!to) return;
+  const dates=Object.keys(st.data).filter(d=>d>=from&&d<=to).sort();
+  const el=document.getElementById('repOut');
+  if(!dates.length){
+    el.innerHTML='<div class="rep-sec" style="text-align:center;color:var(--muted);padding:32px">No data in this date range</div>';
+    return;
+  }
+
+  let totBM=0,bSum=0,bCnt=0,tBAM=0,cBAM=0,tBPM=0,cBPM=0,flares=0;
+  let tPAM=0,cPAM=0,tPPM=0,cPPM=0;
+  let aSx={},aDg={},aMd={};
+
+  dates.forEach(d=>{
+    const dy=st.data[d];
+    (dy.bm||[]).forEach(b=>{totBM++;bSum+=b.bristol;bCnt++;});
+    if(dy.bloating){if(dy.bloating.am>0){tBAM+=dy.bloating.am;cBAM++;}if(dy.bloating.pm>0){tBPM+=dy.bloating.pm;cBPM++;}}
+    if(dy.pain){if(dy.pain.am>0){tPAM+=dy.pain.am;cPAM++;}if(dy.pain.pm>0){tPPM+=dy.pain.pm;cPPM++;}}
+    (dy.symptoms||[]).forEach(s=>aSx[s]=(aSx[s]||0)+1);
+    (dy.digestion||[]).forEach(s=>aDg[s]=(aDg[s]||0)+1);
+    (dy.mood||[]).forEach(s=>aMd[s]=(aMd[s]||0)+1);
+    if(dy.other&&dy.other.includes('flare')) flares++;
+  });
+
+  const avgB=bCnt?(bSum/bCnt).toFixed(1):'—';
+  const avgPD=(totBM/dates.length).toFixed(1);
+  const avgBAM=cBAM?(tBAM/cBAM).toFixed(1):'—';
+  const avgBPM=cBPM?(tBPM/cBPM).toFixed(1):'—';
+  const avgPAM=cPAM?(tPAM/cPAM).toFixed(1):'—';
+  const avgPPM=cPPM?(tPPM/cPPM).toFixed(1):'—';
+
+  const topSx=Object.entries(aSx).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const topDg=Object.entries(aDg).sort((a,b)=>b[1]-a[1]).slice(0,6);
+
+  const tableRows=dates.slice(-21).map(d=>{
+    const dy=st.data[d], dt=new Date(d+'T12:00:00');
+    const ds=dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    const bms=dy.bm||[];
+    const bTypes=bms.map(b=>b.bristol).join(', ')||'—';
+    const am=dy.bloating?(dy.bloating.am||'—'):'—';
+    const pm=dy.bloating?(dy.bloating.pm||'—'):'—';
+    const pam=dy.pain?(dy.pain.am||'—'):'—';
+    const ppm=dy.pain?(dy.pain.pm||'—'):'—';
+    const presets=(dy.presetMeds||[]).join(', ');
+    const extras=(dy.medications||[]).map(m=>m.name).join(', ');
+    const meds=[presets,extras].filter(Boolean).join(', ')||'—';
+    const sxIcons=[...(dy.symptoms||[]),...(dy.digestion||[])].map(id=>{
+      const all=[...SX,...DG]; const it=all.find(x=>x.id===id); return it?it.icon:'';
+    }).join(' ')||'—';
+    const ff=dy.other&&dy.other.includes('flare')?'🔥':'';
+    return `<tr>
+      <td style="white-space:nowrap">${ds}${ff}</td>
+      <td style="text-align:center">${bms.length}</td>
+      <td>${bTypes}</td>
+      <td style="text-align:center">${am}</td>
+      <td style="text-align:center">${pm}</td>
+      <td style="text-align:center">${pam}</td>
+      <td style="text-align:center">${ppm}</td>
+      <td style="font-size:11px">${sxIcons}</td>
+      <td style="font-size:11px;max-width:130px">${meds}</td>
+    </tr>`;
+  }).join('');
+
+  const allFood=dates.flatMap(d=>(st.data[d].food||[]).map(f=>({date:d,...f})));
+
+  const notesRows=dates.filter(d=>st.data[d].notes).map(d=>{
+    const dt=new Date(d+'T12:00:00');
+    return `<tr><td style="white-space:nowrap">${dt.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</td><td>${esc(st.data[d].notes)}</td></tr>`;
+  }).join('')||'<tr><td colspan="2" style="color:var(--muted)">No notes recorded</td></tr>';
+
+  el.innerHTML=`
+  <div class="rep-sec">
+    <div class="rep-sec-title">Summary — ${dates.length} days tracked</div>
+    <div class="rep-stats">
+      <div class="rstat"><div class="rstat-val" style="color:var(--purple)">${totBM}</div><div class="rstat-lbl">Total BMs</div></div>
+      <div class="rstat"><div class="rstat-val" style="color:var(--purple)">${avgPD}</div><div class="rstat-lbl">Avg / day</div></div>
+      <div class="rstat"><div class="rstat-val" style="color:${bCnt?bColor(Math.round(parseFloat(avgB))):'#ccc'}">${avgB}</div><div class="rstat-lbl">Avg Bristol</div></div>
+      <div class="rstat" style="background:${flares>0?'#fff0f0':'var(--bg)'}"><div class="rstat-val" style="color:${flares>0?'var(--red)':'#ccc'}">${flares}</div><div class="rstat-lbl">Flare days</div></div>
+    </div>
+    <div class="rep-stats">
+      <div class="rstat" style="background:var(--pink-bg)"><div class="rstat-val" style="color:var(--pink)">${avgBAM}</div><div class="rstat-lbl">Avg Bloat AM</div></div>
+      <div class="rstat" style="background:var(--pink-bg)"><div class="rstat-val" style="color:var(--pink)">${avgBPM}</div><div class="rstat-lbl">Avg Bloat PM</div></div>
+      <div class="rstat"><div class="rstat-val" style="color:#fb923c">${avgPAM}</div><div class="rstat-lbl">Avg Pain AM</div></div>
+      <div class="rstat"><div class="rstat-val" style="color:#fb923c">${avgPPM}</div><div class="rstat-lbl">Avg Pain PM</div></div>
+    </div>
+  </div>
+
+  <div class="rep-sec">
+    <div class="rep-sec-title">Most Frequent Symptoms & Digestion</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      ${[...topSx.map(([id,cnt])=>({id,cnt,src:'sx'})),...topDg.map(([id,cnt])=>({id,cnt,src:'dg'}))].sort((a,b)=>b.cnt-a.cnt).map(({id,cnt,src})=>{
+        const all=[...SX,...DG]; const it=all.find(x=>x.id===id);
+        return it?`<div style="background:${src==='sx'?'var(--purple-bg)':'#fdf4ff'};border-radius:10px;padding:8px 12px;font-size:13px">${it.icon} ${it.label} <strong style="color:var(--purple)">${cnt}d</strong></div>`:'';
+      }).join('')}
+      ${topSx.length===0&&topDg.length===0?'<span style="color:var(--muted);font-size:14px">No symptoms recorded</span>':''}
+    </div>
+  </div>
+
+  <div class="rep-sec">
+    <div class="rep-sec-title">Daily Log (most recent ${Math.min(dates.length,21)} days)</div>
+    <div style="overflow-x:auto">
+      <table class="rtable">
+        <thead><tr>
+          <th>Date</th><th>#BMs</th><th>Bristol</th>
+          <th>Bloat AM</th><th>Bloat PM</th><th>Pain AM</th><th>Pain PM</th>
+          <th>Symptoms</th><th>Medications</th>
+        </tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>
+  </div>
+
+  ${allFood.length?`<div class="rep-sec">
+    <div class="rep-sec-title">Food & Drink Log (${allFood.length} entries)</div>
+    <div style="overflow-x:auto">
+      <table class="rtable">
+        <thead><tr><th>Date</th><th>Time</th><th>Type</th><th>Item</th></tr></thead>
+        <tbody>${allFood.slice(-40).map(f=>{
+          const dt=new Date(f.date+'T12:00:00');
+          return `<tr>
+            <td style="white-space:nowrap">${dt.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</td>
+            <td>${f.time}</td>
+            <td><span style="background:${MCOLOR[f.type]||'#888'};color:white;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:800">${f.type}</span></td>
+            <td>${esc(f.item)}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>
+  </div>`:''}
+
+  <div class="rep-sec">
+    <div class="rep-sec-title">Doctor Notes</div>
+    <table class="rtable">
+      <thead><tr><th>Date</th><th>Note</th></tr></thead>
+      <tbody>${notesRows}</tbody>
+    </table>
+  </div>
+
+  <button class="print-btn" onclick="window.print()">🖨️ Print / Save as PDF for Doctor</button>`;
+}
+
+// ====================================================
+// HANDLERS
+// ====================================================
+function attachAll(){
+  const bAM=document.getElementById('bAM'), bPM=document.getElementById('bPM');
+  if(bAM) bAM.addEventListener('change',()=>{ sBloat('am',bAM.value,true); });
+  if(bPM) bPM.addEventListener('change',()=>{ sBloat('pm',bPM.value,true); });
+}
+
+// BM
+function startBM(){ st.addBM=true; st.bmD={time:nowTime(),bristol:null,urgent:false,hemorrhoids:false,notes:''}; render(); scroll2('.add-form'); }
+function cancelBM(){ st.addBM=false; render(); }
+function pickB(n){
+  const te=document.getElementById('bmT'), ne=document.getElementById('bmN');
+  if(te) st.bmD.time=te.value;
+  if(ne) st.bmD.notes=ne.value;
+  st.bmD.bristol=n; render();
+}
+function toggleBMTag(tag){
+  const te=document.getElementById('bmT'), ne=document.getElementById('bmN');
+  if(te) st.bmD.time=te.value;
+  if(ne) st.bmD.notes=ne.value;
+  st.bmD[tag]=!st.bmD[tag]; render();
+}
+function saveBM(){
+  const t=document.getElementById('bmT').value;
+  const n=document.getElementById('bmN').value;
+  const b=st.bmD.bristol; if(!b) return;
+  const d=day(st.date);
+  d.bm.push({time:t,bristol:b,urgent:st.bmD.urgent,hemorrhoids:st.bmD.hemorrhoids,notes:n});
+  d.bm.sort((a,b)=>a.time.localeCompare(b.time));
+  st.addBM=false; st.bmD={time:nowTime(),bristol:null,urgent:false,hemorrhoids:false,notes:''};
+  save(); render();
+}
+function delBM(i){ day(st.date).bm.splice(i,1); save(); render(); }
+
+// Bloat
+let _bt;
+function sBloat(p,v,saveNow=false){
+  const n=parseInt(v);
+  const d=day(st.date);
+  d.bloating[p]=n;
+  const el=document.getElementById('b'+(p==='am'?'AM':'PM')+'v');
+  if(el) el.textContent=n||'—';
+  clearTimeout(_bt);
+  if(saveNow) save();
+  else _bt=setTimeout(()=>save(),800);
+}
+
+// Pain
+function sPain(p,v){
+  const d=day(st.date);
+  if(!d.pain) d.pain={am:0,pm:0};
+  d.pain[p]=d.pain[p]===v?0:v;
+  save(); render();
+}
+
+// Chips
+function tog(field,id){
+  const d=day(st.date);
+  if(!d[field]) d[field]=[];
+  const i=d[field].indexOf(id);
+  if(i===-1) d[field].push(id); else d[field].splice(i,1);
+  save(); render();
+}
+
+// Food
+function startFood(){ st.addFood=true; st.foodD={time:nowTime(),type:'meal',item:''}; render(); scroll2('#fIt'); }
+function cancelFood(){ st.addFood=false; render(); }
+function saveFood(){
+  const t=document.getElementById('fTm').value;
+  const tp=document.getElementById('fT').value;
+  const it=document.getElementById('fIt').value.trim();
+  if(!it) return;
+  const d=day(st.date);
+  if(!d.food) d.food=[];
+  d.food.push({time:t,type:tp,item:it});
+  d.food.sort((a,b)=>a.time.localeCompare(b.time));
+  st.addFood=false; save(); render();
+}
+function delFood(i){ day(st.date).food.splice(i,1); save(); render(); }
+
+// Med
+function togPreset(m){
+  const d=day(st.date);
+  if(!d.presetMeds) d.presetMeds=[];
+  const i=d.presetMeds.indexOf(m);
+  if(i===-1) d.presetMeds.push(m); else d.presetMeds.splice(i,1);
+  save(); render();
+}
+function startMed(){ st.addMed=true; st.medD={name:''}; render(); scroll2('#mN'); }
+function cancelMed(){ st.addMed=false; render(); }
+function saveMed(){
+  const n=document.getElementById('mN').value.trim();
+  if(!n) return;
+  const d=day(st.date);
+  if(!d.medications) d.medications=[];
+  d.medications.push({name:n});
+  st.addMed=false; save(); render();
+}
+function delMed(i){ day(st.date).medications.splice(i,1); save(); render(); }
+
+
+// Notes
+function saveNotes(){
+  const ta=document.getElementById('notesTA'); if(!ta) return;
+  day(st.date).notes=ta.value; save();
+}
+
+// ====================================================
+// UTIL
+// ====================================================
+function esc(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function scroll2(sel){ setTimeout(()=>{ const e=document.querySelector(sel); if(e){e.scrollIntoView({behavior:'smooth',block:'nearest'});if(e.focus)e.focus();}},60); }
+
+// ====================================================
+// INIT
+// ====================================================
+load();
+render();
+</script>
+</body>
+</html>
