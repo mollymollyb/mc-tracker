@@ -195,6 +195,7 @@ select.fi{cursor:pointer}
   .rep-sec,.rstat,.card{box-shadow:none;border:1px solid #eee;page-break-inside:avoid}
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -235,6 +236,11 @@ select.fi{cursor:pointer}
 // DATA
 // ====================================================
 const KEY = 'mc-tracker-v1';
+const SURL = 'https://vsswiyuwzjrpzzbhopgu.supabase.co';
+const SKEY = 'sb_publishable_ZiKc_Y4j8OAd31_4rpJLNw_TqqtFcFD';
+const _sb = supabase.createClient(SURL, SKEY);
+let _user = null;
+
 let st = {
   view: 'log',
   date: today(),
@@ -246,8 +252,33 @@ let st = {
 
 function today(){ const d=new Date(); return d.toISOString().split('T')[0]; }
 function nowTime(){ const d=new Date(); return d.toTimeString().slice(0,5); }
-function load(){ try{ const r=localStorage.getItem(KEY); if(r) st.data=JSON.parse(r); }catch(e){} }
-function save(){ localStorage.setItem(KEY,JSON.stringify(st.data)); showToast('Saved ✓'); }
+async function load(){
+  try{ const r=localStorage.getItem(KEY); if(r) st.data=JSON.parse(r); }catch(e){}
+  const { data:{ session } } = await _sb.auth.getSession();
+  if(session){ _user=session.user; await syncFromCloud(); }
+}
+
+async function syncFromCloud(){
+  const { data,error } = await _sb.from('daily_logs').select('log_date,data');
+  if(data && !error){
+    data.forEach(row=>{ st.data[row.log_date]=row.data; });
+    localStorage.setItem(KEY,JSON.stringify(st.data));
+  }
+}
+
+function save(){
+  localStorage.setItem(KEY,JSON.stringify(st.data));
+  showToast('Saved ✓');
+  if(_user) syncDayToCloud(st.date);
+}
+
+async function syncDayToCloud(date){
+  const d=st.data[date]; if(!d) return;
+  await _sb.from('daily_logs').upsert(
+    { user_id:_user.id, log_date:date, data:d, updated_at:new Date().toISOString() },
+    { onConflict:'user_id,log_date' }
+  );
+}
 
 function day(date){
   if(!st.data[date]) st.data[date]={
@@ -295,6 +326,7 @@ function render(){
   document.getElementById('dateMain').textContent=fmt1(st.date);
   document.getElementById('dateSub').textContent=fmt2(st.date);
   const el=document.getElementById('mainContent');
+  if(!_user){ el.innerHTML=rLogin(); return; }
   if(st.view==='log') el.innerHTML=rLog();
   else if(st.view==='history') el.innerHTML=rHistory();
   else el.innerHTML=rReport();
@@ -775,7 +807,8 @@ function genReport(){
     </table>
   </div>
 
-  <button class="print-btn" onclick="window.print()">🖨️ Print / Save as PDF for Doctor</button>`;
+  <button class="print-btn" onclick="window.print()">🖨️ Print / Save as PDF for Doctor</button>
+  <button onclick="signOut()" style="width:100%;margin-top:10px;background:none;border:1.5px solid var(--border);border-radius:12px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--muted)">Sign Out</button>`;
 }
 
 // ====================================================
@@ -894,6 +927,62 @@ function esc(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').replac
 function scroll2(sel){ setTimeout(()=>{ const e=document.querySelector(sel); if(e){e.scrollIntoView({behavior:'smooth',block:'nearest'});if(e.focus)e.focus();}},60); }
 
 // ====================================================
+// AUTH
+// ====================================================
+function rLogin(){
+  return `
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:75vh;padding:24px">
+    <div style="font-size:52px;margin-bottom:8px">🔬</div>
+    <h1 style="font-size:24px;font-weight:800;margin-bottom:4px">MC Tracker</h1>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:32px;text-align:center">Sign in to sync your data across all devices</p>
+    <div style="width:100%;max-width:320px">
+      <div class="fg" style="margin-bottom:12px">
+        <label>Email</label>
+        <input class="fi" type="email" id="authEmail" placeholder="your@email.com" style="width:100%">
+      </div>
+      <div class="fg" style="margin-bottom:20px">
+        <label>Password</label>
+        <input class="fi" type="password" id="authPass" placeholder="••••••••" style="width:100%">
+      </div>
+      <button onclick="signIn()" style="width:100%;background:var(--purple);color:white;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px">Sign In</button>
+      <button onclick="signUp()" style="width:100%;background:var(--bg);color:var(--text);border:1.5px solid var(--border);border-radius:12px;padding:14px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit">Create Account</button>
+      <div id="authErr" style="font-size:13px;margin-top:12px;text-align:center;color:var(--red)"></div>
+    </div>
+  </div>`;
+}
+
+async function signIn(){
+  const email=document.getElementById('authEmail').value.trim();
+  const pass=document.getElementById('authPass').value;
+  const errEl=document.getElementById('authErr');
+  errEl.style.color='var(--red)'; errEl.textContent='Signing in...';
+  const { data,error }=await _sb.auth.signInWithPassword({email,password:pass});
+  if(error){ errEl.textContent=error.message; return; }
+  _user=data.user;
+  await syncFromCloud();
+  render();
+}
+
+async function signUp(){
+  const email=document.getElementById('authEmail').value.trim();
+  const pass=document.getElementById('authPass').value;
+  const errEl=document.getElementById('authErr');
+  if(pass.length<6){ errEl.textContent='Password must be at least 6 characters'; return; }
+  errEl.style.color='var(--red)'; errEl.textContent='Creating account...';
+  const { error }=await _sb.auth.signUp({email,password:pass});
+  if(error){ errEl.textContent=error.message; return; }
+  errEl.style.color='var(--green-dark)';
+  errEl.textContent='✓ Check your email to confirm your account, then sign in.';
+}
+
+async function signOut(){
+  await _sb.auth.signOut();
+  _user=null; st.data={};
+  localStorage.removeItem(KEY);
+  render();
+}
+
+// ====================================================
 // EXPORT / IMPORT
 // ====================================================
 function exportData(){
@@ -931,8 +1020,7 @@ function importData(input){
 // ====================================================
 // INIT
 // ====================================================
-load();
-render();
+load().then(render);
 </script>
 </body>
 </html>
